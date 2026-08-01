@@ -38,6 +38,17 @@ class FirebaseAuthRepository {
 
   LocalUser? currentUser() => _fromFirebase(_auth.currentUser);
 
+  /// Creates (or reuses) a device-level anonymous account so the app works
+  /// without any sign-in screens while still persisting channels per install.
+  Future<LocalUser> signInAnonymously() async {
+    try {
+      final creds = await _auth.signInAnonymously();
+      return _fromFirebase(creds.user)!;
+    } on FirebaseAuthException catch (error) {
+      throw _mapAuthError(error);
+    }
+  }
+
   Future<LocalUser> signInWithEmail({
     required String email,
     required String password,

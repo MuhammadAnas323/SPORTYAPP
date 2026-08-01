@@ -86,65 +86,81 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildFeed(BuildContext context, WidgetRef ref, HomeState state) {
-    if (state.feed.channels.isEmpty || state.feed.allItems.isEmpty) {
-      return EmptyState(
-        icon: Icons.sports_soccer_rounded,
-        title: AppStrings.noMatchesTitle,
-        body: AppStrings.noMatchesBody,
-      );
-    }
+    // The filter bar is always visible so the user can filter even when the
+    // feed is empty. Below it: a full-screen empty state when nothing matches,
+    // otherwise the refreshable feed. A channel that exists but failed to load
+    // or returned nothing renders its own diagnostic chip (error / "no
+    // matches") instead of being hidden.
+    final showEmpty =
+        state.feed.channels.isEmpty || state.visibleChannels.isEmpty;
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(feedStoreProvider.notifier).refresh(),
-      color: Theme.of(context).colorScheme.primary,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          if (state.isRefreshing)
-            const SliverToBoxAdapter(
-              child: LinearProgressIndicator(minHeight: 2),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: AppSizes.lg)),
+    return Column(
+      children: [
+        const SizedBox(height: AppSizes.lg),
+        SportFilterBar(
+          filter: state.filter,
+          onChanged: (f) =>
+              ref.read(homeViewModelProvider.notifier).setFilter(f),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        Expanded(
+          child: showEmpty
+              ? EmptyState(
+                  icon: Icons.sports_soccer_rounded,
+                  title: AppStrings.noMatchesTitle,
+                  body: AppStrings.noMatchesBody,
+                )
+              : RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(feedStoreProvider.notifier).refresh(),
+                  color: Theme.of(context).colorScheme.primary,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      if (state.isRefreshing)
+                        const SliverToBoxAdapter(
+                          child: LinearProgressIndicator(minHeight: 2),
+                        ),
 
-          SliverToBoxAdapter(
-            child: SportFilterBar(
-              filter: state.filter,
-              onChanged: (f) =>
-                  ref.read(homeViewModelProvider.notifier).setFilter(f),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: AppSizes.lg)),
+                      // Featured live hero (glassmorphism).
+                      if (state.feed.liveOnly.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSizes.xl),
+                            child: FeaturedLiveCard(
+                              match: state.feed.liveOnly.first,
+                              onTap: () =>
+                                  _openMatch(context, state.feed.liveOnly.first),
+                            ),
+                          ),
+                        )
+                      else
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: AppSizes.xs),
+                        ),
 
-          // Featured live hero (glassmorphism).
-          if (state.feed.liveOnly.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSizes.xl),
-                child: FeaturedLiveCard(
-                  match: state.feed.liveOnly.first,
-                  onTap: () => _openMatch(context, state.feed.liveOnly.first),
+                      // Per-source sections.
+                      SliverList.builder(
+                        itemCount: state.visibleChannels.length,
+                        itemBuilder: (context, index) {
+                          final channel = state.visibleChannels[index];
+                          return SourceSection(
+                            channel: channel,
+                            onMatchTap: (m) => _openMatch(context, m),
+                            onRetry: () =>
+                                ref.read(feedStoreProvider.notifier).refresh(),
+                          );
+                        },
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: AppSizes.xxl),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          else
-            const SliverToBoxAdapter(child: SizedBox(height: AppSizes.xs)),
-
-          // Per-source sections.
-          SliverList.builder(
-            itemCount: state.visibleChannels.length,
-            itemBuilder: (context, index) {
-              final channel = state.visibleChannels[index];
-              return SourceSection(
-                channel: channel,
-                onMatchTap: (m) => _openMatch(context, m),
-                onRetry: () =>
-                    ref.read(feedStoreProvider.notifier).refresh(),
-              );
-            },
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: AppSizes.xxl)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

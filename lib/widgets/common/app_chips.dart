@@ -27,7 +27,7 @@ class SportFilterChip extends StatelessWidget {
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: selected ? scheme.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSizes.radiusPill),
+        borderRadius: BorderRadius.circular(AppSizes.radiusXs),
         border: Border.all(
           color: selected ? scheme.primary : scheme.outlineVariant,
         ),
@@ -36,7 +36,7 @@ class SportFilterChip extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onSelected,
-          borderRadius: BorderRadius.circular(AppSizes.radiusPill),
+          borderRadius: BorderRadius.circular(AppSizes.radiusXs),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.lg,

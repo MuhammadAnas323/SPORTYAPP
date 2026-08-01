@@ -24,14 +24,46 @@ class CricketApiAdapter extends BaseApiAdapter {
 
   static const List<String> _feedPaths = [
     '/matches',
-    '/cricket',
-    '/current',
-    '/live',
-    '/upcoming',
+    '/currentMatches',
     '/v1/matches',
-    '/api/matches',
+    '/v1/currentMatches',
     '/',
   ];
+
+  List<String> testProbePaths(ApiConnection connection) {
+    return [
+      '/status',
+      '/health',
+      '/ping',
+      ..._feedPaths,
+    ];
+  }
+
+  @override
+  String? validateProbeResponse(
+    ApiConnection connection,
+    Response response,
+    String path,
+  ) {
+    final genericFailure = super.validateProbeResponse(connection, response, path);
+    if (genericFailure != null) return genericFailure;
+
+    final data = response.data;
+    final body = JsonGuard.asMap(data);
+    if (body != null) {
+      final status = JsonGuard.asString(JsonGuard.pick(body, ['status', 'message', 'result', 'ok']))?.toLowerCase();
+      if (status != null && (status == 'up' || status == 'ok' || status == 'healthy' || status == 'success')) {
+        return null;
+      }
+    }
+
+    if (findMatchList(data).isNotEmpty) return null;
+
+    if (path.contains('status') || path.contains('health') || path.contains('ping')) {
+      return 'The status endpoint at $path did not return a recognizable health payload.';
+    }
+    return 'The response from $path did not contain valid cricket API data.';
+  }
 
   @override
   Future<List<MatchSummary>> fetchFeed(ApiConnection connection) async {
@@ -39,7 +71,7 @@ class CricketApiAdapter extends BaseApiAdapter {
     String? firstError;
     var sawHealthyResponse = false;
 
-    for (final path in _feedPaths) {
+    for (final path in orderedFeedPaths(connection.baseUrl, _feedPaths)) {
       try {
         final response = await dio.get<dynamic>(path);
         if (response.statusCode == null ||
@@ -47,10 +79,18 @@ class CricketApiAdapter extends BaseApiAdapter {
             response.statusCode! >= 300) {
           continue;
         }
+        // A 2xx body may still be an API error envelope (bad key, quota,
+        // etc.) — report that reason instead of pretending the feed is empty.
+        final bodyError = BaseApiAdapter.apiErrorInBody(response.data);
+        if (bodyError != null) {
+          firstError ??= bodyError;
+          continue;
+        }
         sawHealthyResponse = true;
         final items = findMatchList(response.data);
         if (items.isEmpty) continue;
 
+        rememberWorkingFeedPath(connection.baseUrl, path);
         return items
             .map(_parseMatch)
             .where((m) => m != null)

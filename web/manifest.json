@@ -1,11 +1,11 @@
 {
-    "name": "SportyApp",
-    "short_name": "SportyApp",
+    "name": "SPORTYAPP",
+    "short_name": "SPORTYAPP",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "SportyApp — your feeds, your channels, one stadium.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFFFFF",
+    "description": "SPORTYAPP — your feeds, your channels, one stadium.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -12,11 +12,16 @@ final firebaseAuthRepositoryProvider =
 });
 
 /// Firebase auth state. `null` means signed out.
+///
+/// There are no sign-in/sign-up screens anymore: the app auto-signs-in with a
+/// device-level anonymous account so channels persist per install while the
+/// user never sees an auth UI.
 final authViewModelProvider =
     AsyncNotifierProvider<AuthViewModel, LocalUser?>(AuthViewModel.new);
 
 class AuthViewModel extends AsyncNotifier<LocalUser?> {
   StreamSubscription<LocalUser?>? _subscription;
+  Future<void>? _ensureSignedInFuture;
 
   @override
   Future<LocalUser?> build() {
@@ -24,9 +29,27 @@ class AuthViewModel extends AsyncNotifier<LocalUser?> {
     _subscription?.cancel();
     _subscription = repository.authStateChanges().listen((user) {
       state = AsyncData(user);
+      if (user == null) _ensureSignedIn();
     });
     ref.onDispose(() => _subscription?.cancel());
-    return Future.value(repository.currentUser());
+    final current = repository.currentUser();
+    if (current == null) _ensureSignedIn();
+    return Future.value(current);
+  }
+
+  /// Silently signs in an anonymous account when nobody is signed in, so the
+  /// app is always usable without an auth screen.
+  Future<void> _ensureSignedIn() {
+    return _ensureSignedInFuture ??= ref
+        .read(firebaseAuthRepositoryProvider)
+        .signInAnonymously()
+        .then((user) {
+          state = AsyncData(user);
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          state = AsyncError(normalizeError(error), stackTrace);
+        })
+        .whenComplete(() => _ensureSignedInFuture = null);
   }
 
   Future<void> signIn({

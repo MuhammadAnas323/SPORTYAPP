@@ -61,6 +61,32 @@ void main() {
     expect(find.text('India'), findsOneWidget);
     expect(find.text('Australia'), findsOneWidget);
   });
+
+  testWidgets('Home shows the sport filter bar even when the feed is empty',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedStoreProvider.overrideWith(
+            () => _FakeFeedStore(const AggregatedFeed()),
+          ),
+        ],
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Cricket'), findsOneWidget);
+    expect(find.text('Football'), findsOneWidget);
+    expect(find.text('No matches yet'), findsOneWidget);
+  });
 }
 
 class _FakeFeedStore extends FeedStore {

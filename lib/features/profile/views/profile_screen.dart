@@ -4,40 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../models/sport_type.dart';
 import '../../../widgets/common/app_avatar.dart';
+import '../../../widgets/common/secret_tap.dart';
 import '../../../widgets/common/section_header.dart';
 import '../../auth/viewmodels/auth_view_model.dart';
 import '../settings/viewmodels/settings_view_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-
-  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-          'Your channels stay in your Firebase account. You will be signed '
-          'out of this device only.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(AppStrings.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(AppStrings.signOut),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await ref.read(authViewModelProvider.notifier).signOut();
-    }
-  }
 
   Future<void> _editProfile(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authViewModelProvider).valueOrNull;
@@ -100,51 +74,12 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showAddApiSheet(BuildContext context) async {
-    final sport = await showModalBottomSheet<SportType>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: AppSizes.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSizes.lg,
-                  0,
-                  AppSizes.lg,
-                  AppSizes.sm,
-                ),
-                child: Text(
-                  AppStrings.chooseApiType,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.sports_cricket_rounded),
-                title: const Text(AppStrings.cricketApi),
-                subtitle: const Text(AppStrings.cricketApiHelper),
-                onTap: () => Navigator.of(context).pop(SportType.cricket),
-              ),
-              ListTile(
-                leading: const Icon(Icons.sports_soccer_rounded),
-                title: const Text(AppStrings.footballApi),
-                subtitle: const Text(AppStrings.footballApiHelper),
-                onTap: () => Navigator.of(context).pop(SportType.football),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (sport == null || !context.mounted) return;
-    final query = sport == SportType.football
-        ? 'sport=football'
-        : 'sport=cricket';
-    context.go('/profile/api/add?$query');
+  /// Hidden developer-mode unlock: reveals the API Settings screen.
+  void _unlockDeveloperMode(BuildContext context) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(const SnackBar(content: Text(AppStrings.developerModeActivated)));
+    context.go('/profile/api');
   }
 
   @override
@@ -171,9 +106,12 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSizes.lg),
               child: Row(
                 children: [
-                  AppAvatar(
-                    label: user?.name ?? 'F',
-                    size: 56,
+                  SecretTap(
+                    onSecret: () => _unlockDeveloperMode(context),
+                    child: AppAvatar(
+                      label: user?.name ?? 'F',
+                      size: 56,
+                    ),
                   ),
                   const SizedBox(width: AppSizes.lg),
                   Expanded(
@@ -213,18 +151,6 @@ class ProfileScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: Icon(Icons.api_rounded, color: scheme.primary),
-                  title: const Text(AppStrings.addChannel),
-                  subtitle: const Text(AppStrings.addChannelBody),
-                  trailing: const Icon(Icons.add_circle_outline_rounded),
-                  onTap: () => _showAddApiSheet(context),
-                ),
-                const Divider(
-                  height: 1,
-                  indent: AppSizes.lg,
-                  endIndent: AppSizes.lg,
-                ),
                 const ListTile(
                   leading: Icon(Icons.brightness_6_outlined),
                   title: Text(AppStrings.theme),
@@ -294,7 +220,7 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded),
-                  title: const Text('About SportyApp'),
+                  title: const Text('About SPORTYAPP'),
                   subtitle: const Text(AppStrings.version),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.go('/about'),
@@ -307,17 +233,6 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.go('/support'),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: AppSizes.xl),
-
-          OutlinedButton.icon(
-            onPressed: () => _confirmSignOut(context, ref),
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text(AppStrings.signOut),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: scheme.error,
-              side: BorderSide(color: scheme.error.withValues(alpha: 0.5)),
             ),
           ),
         ],

@@ -23,6 +23,7 @@ class ApiConnection extends Equatable {
     this.status = ConnectionStatus.notTested,
     this.lastTestedAt,
     this.lastError,
+    this.createdByUid,
     this.enabled = true,
   });
 
@@ -51,6 +52,7 @@ class ApiConnection extends Equatable {
   final ConnectionStatus status;
   final DateTime? lastTestedAt;
   final String? lastError;
+  final String? createdByUid;
 
   /// Master on/off switch without deleting.
   final bool enabled;
@@ -74,6 +76,8 @@ class ApiConnection extends Equatable {
     bool clearLastTestedAt = false,
     String? lastError,
     bool clearLastError = false,
+    String? createdByUid,
+    bool clearCreatedByUid = false,
     bool? enabled,
   }) {
     return ApiConnection(
@@ -88,12 +92,14 @@ class ApiConnection extends Equatable {
       status: status ?? this.status,
       lastTestedAt: clearLastTestedAt ? null : lastTestedAt ?? this.lastTestedAt,
       lastError: clearLastError ? null : lastError ?? this.lastError,
+      createdByUid: clearCreatedByUid ? null : createdByUid ?? this.createdByUid,
       enabled: enabled ?? this.enabled,
     );
   }
 
   /// Fresh connection before any test.
   factory ApiConnection.draft({
+    String? id,
     required String label,
     required SportType sportType,
     required String baseUrl,
@@ -103,7 +109,7 @@ class ApiConnection extends Equatable {
     Map<String, String> extraHeaders = const {},
   }) {
     return ApiConnection(
-      id: IdGenerator.newId(),
+      id: id ?? IdGenerator.newId(),
       label: label,
       sportType: sportType,
       baseUrl: baseUrl,
@@ -128,6 +134,7 @@ class ApiConnection extends Equatable {
         'status': status.name,
         'lastTestedAt': lastTestedAt?.toIso8601String(),
         'lastError': lastError,
+        'createdByUid': createdByUid,
         'enabled': enabled,
       };
 
@@ -148,6 +155,7 @@ class ApiConnection extends Equatable {
           ConnectionStatus.notTested,
       lastTestedAt: DateTime.tryParse(json['lastTestedAt'] as String? ?? ''),
       lastError: json['lastError'] as String?,
+      createdByUid: json['createdByUid'] as String?,
       enabled: json['enabled'] as bool? ?? true,
     );
   }
@@ -165,6 +173,7 @@ class ApiConnection extends Equatable {
         status,
         lastTestedAt,
         lastError,
+        createdByUid,
         enabled,
       ];
 }

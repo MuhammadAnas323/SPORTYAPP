@@ -1,7 +1,12 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/extensions/string_extensions.dart';
+import '../../../../core/utils/id_generator.dart';
 import '../../../../models/api_connection.dart';
 import '../../../../models/auth_style.dart';
 import '../../../../models/connection_status.dart';
@@ -13,6 +18,7 @@ import '../../../../services/adapters/adapter_test_result.dart';
 class ConnectionFormState {
   const ConnectionFormState({
     this.editingId,
+    this.draftId,
     this.label = '',
     this.sportType = SportType.cricket,
     this.baseUrl = '',
@@ -22,10 +28,13 @@ class ConnectionFormState {
     this.extraHeadersText = '',
     this.isTesting = false,
     this.testResult,
+    this.retryBlockedUntil,
+    this.retryRemaining,
     this.saved = false,
   });
 
   final String? editingId;
+  final String? draftId;
   final String label;
   final SportType sportType;
   final String baseUrl;
@@ -35,12 +44,16 @@ class ConnectionFormState {
   final String extraHeadersText;
   final bool isTesting;
   final AdapterTestResult? testResult;
+  final DateTime? retryBlockedUntil;
+  final Duration? retryRemaining;
   final bool saved;
 
   /// Only a fresh, passing test unlocks Save.
   bool get canSave => !isTesting && testResult?.success == true;
 
   bool get isEditing => editingId != null;
+
+  bool get isRetryLocked => retryRemaining != null && retryRemaining!.inMilliseconds > 0;
 
   /// Auth style needs a header/param name.
   bool get needsHeaderName =>
@@ -55,13 +68,17 @@ class ConnectionFormState {
     AuthStyle? authStyle,
     String? headerName,
     String? extraHeadersText,
+    String? draftId,
     bool? isTesting,
     AdapterTestResult? testResult,
+    DateTime? retryBlockedUntil,
+    Duration? retryRemaining,
     bool clearTestResult = false,
     bool? saved,
   }) {
     return ConnectionFormState(
       editingId: editingId ?? this.editingId,
+      draftId: draftId ?? this.draftId,
       label: label ?? this.label,
       sportType: sportType ?? this.sportType,
       baseUrl: baseUrl ?? this.baseUrl,
@@ -71,11 +88,14 @@ class ConnectionFormState {
       extraHeadersText: extraHeadersText ?? this.extraHeadersText,
       isTesting: isTesting ?? this.isTesting,
       testResult: clearTestResult ? null : testResult ?? this.testResult,
+      retryBlockedUntil: retryBlockedUntil ?? this.retryBlockedUntil,
+      retryRemaining: retryRemaining ?? this.retryRemaining,
       saved: saved ?? this.saved,
     );
   }
 
   ApiConnection toDraft() => ApiConnection.draft(
+        id: editingId ?? draftId,
         label: label.trim(),
         sportType: sportType,
         baseUrl: baseUrl.normalizedUrl(),
@@ -111,20 +131,41 @@ final connectionFormViewModelProvider = NotifierProvider<
     ConnectionFormViewModel, ConnectionFormState>(ConnectionFormViewModel.new);
 
 class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
+  bool _testInProgress = false;
+  int _currentTestId = 0;
+  Timer? _blockCountdownTimer;
+  bool _alive = true;
+  bool _disposeRegistered = false;
+
+  static const _blockedUntilKeyPrefix = 'api_test_retry_until:';
+
   @override
-  ConnectionFormState build() => const ConnectionFormState();
+  ConnectionFormState build() {
+    if (!_disposeRegistered) {
+      ref.onDispose(() {
+        _blockCountdownTimer?.cancel();
+        _alive = false;
+      });
+      _disposeRegistered = true;
+    }
+    return const ConnectionFormState();
+  }
 
   /// Fresh form for adding a new API, optionally pre-selecting the sport.
   void resetForAdd(SportType? initialSportType) {
+    final draftId = IdGenerator.newId();
     state = ConnectionFormState(
       sportType: initialSportType ?? SportType.cricket,
+      draftId: draftId,
     );
+    _restoreRetryState(draftId);
   }
 
   /// Loads an existing connection into edit mode.
   void loadForEdit(ApiConnection connection) {
     state = ConnectionFormState(
       editingId: connection.id,
+      draftId: connection.id,
       label: connection.label,
       sportType: connection.sportType,
       baseUrl: connection.baseUrl,
@@ -135,6 +176,7 @@ class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
           .map((e) => '${e.key}: ${e.value}')
           .join('\n'),
     );
+    _restoreRetryState(connection.id);
   }
 
   /// Any field change invalidates a stale test result (save stays locked
@@ -143,6 +185,84 @@ class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
     if (state.testResult != null) {
       state = state.copyWith(clearTestResult: true);
     }
+  }
+
+  String _retryStateKey(String connectionId) {
+    return '$_blockedUntilKeyPrefix$connectionId';
+  }
+
+  Future<void> _restoreRetryState(String connectionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_retryStateKey(connectionId));
+    if (raw == null) return;
+
+    final until = DateTime.tryParse(raw);
+    if (until == null) return;
+
+    final remaining = until.difference(DateTime.now());
+    if (remaining.inMilliseconds <= 0) {
+      await prefs.remove(_retryStateKey(connectionId));
+      return;
+    }
+
+    if (_alive) {
+      state = state.copyWith(
+        retryBlockedUntil: until,
+        retryRemaining: remaining,
+      );
+      _startRetryCountdown();
+    }
+  }
+
+  Future<void> _cacheRetryBlockedUntil(String connectionId, DateTime until) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_retryStateKey(connectionId), until.toIso8601String());
+  }
+
+  Future<void> _clearCachedRetryState(String connectionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_retryStateKey(connectionId));
+  }
+
+  void _startRetryCountdown() {
+    _blockCountdownTimer?.cancel();
+    _blockCountdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final until = state.retryBlockedUntil;
+      if (until == null) {
+        _stopRetryCountdown();
+        return;
+      }
+      final remaining = until.difference(DateTime.now());
+      if (remaining.inMilliseconds <= 0) {
+        _stopRetryCountdown();
+        state = state.copyWith(
+          retryBlockedUntil: null,
+          retryRemaining: null,
+        );
+        if (state.draftId != null) {
+          _clearCachedRetryState(state.draftId!);
+        }
+      } else {
+        state = state.copyWith(retryRemaining: remaining);
+      }
+    });
+  }
+
+  void _stopRetryCountdown() {
+    _blockCountdownTimer?.cancel();
+    _blockCountdownTimer = null;
+  }
+
+  void _applyRetryBlock(Duration retryAfter) {
+    final blockedUntil = DateTime.now().add(retryAfter);
+    state = state.copyWith(
+      retryBlockedUntil: blockedUntil,
+      retryRemaining: retryAfter,
+    );
+    if (state.draftId != null) {
+      _cacheRetryBlockedUntil(state.draftId!, blockedUntil);
+    }
+    _startRetryCountdown();
   }
 
   void setLabel(String v) {
@@ -183,9 +303,14 @@ class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
   /// Validation shared by the Test button. Returns null when valid.
   String? validate() {
     if (state.label.trim().isEmpty) return 'Give this channel a name';
-    if (state.baseUrl.trim().isEmpty) return 'Enter the API host';
-    if (!RegExp(r'^https?://').hasMatch(state.baseUrl.trim())) {
+    final baseUrl = state.baseUrl.trim();
+    if (baseUrl.isEmpty) return 'Enter the API host';
+    if (!RegExp(r'^https?://').hasMatch(baseUrl)) {
       return 'The base URL must start with http:// or https://';
+    }
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null || uri.host.isEmpty) {
+      return AppStrings.invalidBaseUrl;
     }
     if (state.apiKey.trim().isEmpty) return 'Paste your API key';
     if (state.needsHeaderName && state.headerName.trim().isEmpty) {
@@ -198,6 +323,10 @@ class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
   /// sport adapter. Sets [ConnectionFormState.isTesting] while in flight and
   /// [ConnectionFormState.testResult] on completion.
   Future<String?> testConnection() async {
+    if (_testInProgress || state.isRetryLocked) {
+      return null;
+    }
+
     final validation = validate();
     if (validation != null) return validation;
 
@@ -208,18 +337,37 @@ class ConnectionFormViewModel extends Notifier<ConnectionFormState> {
       return 'No adapter is available for ${draft.sportType.label} yet.';
     }
 
+    _testInProgress = true;
+    final testId = ++_currentTestId;
     state = state.copyWith(isTesting: true, clearTestResult: true);
     try {
       final result = await adapter.testConnection(draft);
-      state = state.copyWith(isTesting: false, testResult: result);
+      if (testId != _currentTestId) return null;
+      if (result.retryAfter != null) {
+        _applyRetryBlock(result.retryAfter!);
+      }
+      state = state.copyWith(testResult: result);
       return result.success ? null : result.message;
+    } on TimeoutException {
+      final failure = AdapterTestResult.failure(
+        message: AppStrings.connectionTimedOut,
+      );
+      if (testId == _currentTestId) {
+        state = state.copyWith(testResult: failure);
+      }
+      return failure.message;
     } catch (error) {
       final readable = normalizeError(error).message;
-      state = state.copyWith(
-        isTesting: false,
-        testResult: AdapterTestResult.failure(message: readable),
-      );
+      final failure = AdapterTestResult.failure(message: readable);
+      if (testId == _currentTestId) {
+        state = state.copyWith(testResult: failure);
+      }
       return readable;
+    } finally {
+      if (testId == _currentTestId) {
+        _testInProgress = false;
+        state = state.copyWith(isTesting: false);
+      }
     }
   }
 

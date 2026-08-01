@@ -68,8 +68,10 @@ abstract final class JsonGuard {
     return const [];
   }
 
-  /// Picks a nested object by a dotted path, e.g. `data.match.teams`.
-  static Map<String, dynamic>? pickPath(
+  /// Picks a nested value by a dotted path, e.g. `data.match.teams`.
+  /// Unlike a typed getter this returns the raw value, so it also works when
+  /// the final node is a list.
+  static dynamic pickValuePath(
     Map<String, dynamic> map,
     String path,
   ) {
@@ -80,6 +82,6 @@ abstract final class JsonGuard {
       if (m == null || !m.containsKey(part)) return null;
       cursor = m[part];
     }
-    return asMap(cursor);
+    return cursor;
   }
 }

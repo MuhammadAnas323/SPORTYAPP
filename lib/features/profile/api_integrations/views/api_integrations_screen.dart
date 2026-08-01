@@ -6,12 +6,17 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../models/api_connection.dart';
 import '../../../../models/sport_type.dart';
+import '../../../../widgets/common/app_buttons.dart';
 import '../../../../widgets/common/section_header.dart';
 import '../viewmodels/api_integrations_view_model.dart';
 import 'widgets/connection_card.dart';
 
 class ApiIntegrationsScreen extends ConsumerWidget {
-  const ApiIntegrationsScreen({super.key});
+  const ApiIntegrationsScreen({super.key, this.sportType});
+
+  /// When set, only connections of this sport are shown and the Add flow is
+  /// pre-seeded for it.
+  final SportType? sportType;
 
   Future<void> _confirmDelete(
     BuildContext context,
@@ -51,23 +56,28 @@ class ApiIntegrationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(apiIntegrationsViewModelProvider);
     final notifier = ref.read(apiIntegrationsViewModelProvider.notifier);
-    final cricket = state.connections
+    final visibleConnections = sportType == null
+        ? state.connections
+        : state.connections
+            .where((c) => c.sportType == sportType)
+            .toList();
+    final cricket = visibleConnections
         .where((c) => c.sportType == SportType.cricket)
         .toList();
-    final football = state.connections
+    final football = visibleConnections
         .where((c) => c.sportType == SportType.football)
         .toList();
-    final other = state.connections
+    final other = visibleConnections
         .where((c) => c.sportType == SportType.other)
         .toList();
+    final addRoute = switch (sportType) {
+      SportType.football => '/profile/api/add?sport=football',
+      SportType.cricket => '/profile/api/add?sport=cricket',
+      _ => '/profile/api/add',
+    };
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.apiIntegrationsSection)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/profile/api/add'),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(AppStrings.addChannel),
-      ),
       body: RefreshIndicator(
         onRefresh: notifier.refresh,
         color: Theme.of(context).colorScheme.primary,
@@ -79,8 +89,14 @@ class ApiIntegrationsScreen extends ConsumerWidget {
             AppSizes.xxl,
           ),
           children: [
+            AppPrimaryButton(
+              label: AppStrings.addChannel,
+              icon: Icons.add_rounded,
+              onPressed: () => context.go(addRoute),
+            ),
+            const SizedBox(height: AppSizes.lg),
             SectionHeader(
-              title: '${state.connections.length} saved connection${state.connections.length == 1 ? '' : 's'}',
+              title: '${visibleConnections.length} saved connection${visibleConnections.length == 1 ? '' : 's'}',
               subtitle: AppStrings.poweredBy,
             ),
             const SizedBox(height: AppSizes.lg),
@@ -130,8 +146,9 @@ class ApiIntegrationsScreen extends ConsumerWidget {
               const SizedBox(height: AppSizes.xl),
             ],
 
-            if (state.connections.isEmpty)
+            if (visibleConnections.isEmpty)
               _EmptyConnectionsBanner(
+                sportType: sportType,
                 onAddCricket: () =>
                     context.go('/profile/api/add?sport=cricket'),
                 onAddFootball: () =>
@@ -216,16 +233,20 @@ class _SportChannelRow extends StatelessWidget {
 
 class _EmptyConnectionsBanner extends StatelessWidget {
   const _EmptyConnectionsBanner({
+    this.sportType,
     required this.onAddCricket,
     required this.onAddFootball,
   });
 
+  final SportType? sportType;
   final VoidCallback onAddCricket;
   final VoidCallback onAddFootball;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isCricket = sportType == null || sportType == SportType.cricket;
+    final isFootball = sportType == null || sportType == SportType.football;
     return Column(
       children: [
         const SizedBox(height: AppSizes.lg),
@@ -250,16 +271,18 @@ class _EmptyConnectionsBanner extends StatelessWidget {
           spacing: AppSizes.sm,
           runSpacing: AppSizes.sm,
           children: [
-            FilledButton.tonalIcon(
-              onPressed: onAddCricket,
-              icon: const Icon(Icons.sports_cricket_rounded),
-              label: const Text(AppStrings.cricketApi),
-            ),
-            FilledButton.tonalIcon(
-              onPressed: onAddFootball,
-              icon: const Icon(Icons.sports_soccer_rounded),
-              label: const Text(AppStrings.footballApi),
-            ),
+            if (isCricket)
+              FilledButton.tonalIcon(
+                onPressed: onAddCricket,
+                icon: const Icon(Icons.sports_cricket_rounded),
+                label: const Text(AppStrings.cricketApi),
+              ),
+            if (isFootball)
+              FilledButton.tonalIcon(
+                onPressed: onAddFootball,
+                icon: const Icon(Icons.sports_soccer_rounded),
+                label: const Text(AppStrings.footballApi),
+              ),
           ],
         ),
       ],

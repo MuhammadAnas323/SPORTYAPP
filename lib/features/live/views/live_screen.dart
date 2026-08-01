@@ -56,8 +56,6 @@ class LiveScreen extends ConsumerWidget {
         icon: Icons.sensors_off_rounded,
         title: AppStrings.nothingLiveTitle,
         body: AppStrings.nothingLiveBody,
-        actionLabel: AppStrings.goHome,
-        onAction: () => context.go('/home'),
       );
     }
 

@@ -58,11 +58,47 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _bullet(context, 'No bundled data — everything renders from APIs you connect.'),
-                  _bullet(context, 'API keys are stored in secure device storage.'),
-                  _bullet(context, 'Cricket + football today; more sports via adapter extensions.'),
+                  _bullet(context, AppStrings.aboutBullet1),
+                  _bullet(context, AppStrings.aboutBullet2),
+                  _bullet(context, AppStrings.aboutBullet3),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.sectionGap),
+          Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSizes.lg),
+                  child: Text(
+                    AppStrings.contactTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.mail_outline_rounded),
+                  title: const Text(AppStrings.contactEmail),
+                  subtitle: const Text(AppStrings.contactBody),
+                  trailing: const Icon(Icons.open_in_new_rounded),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Mail client integration is a future hook. '
+                          'Email ${AppStrings.contactEmail}',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1, indent: AppSizes.lg, endIndent: AppSizes.lg),
+                const ListTile(
+                  leading: Icon(Icons.schedule_rounded),
+                  title: Text(AppStrings.responseTime),
+                ),
+              ],
             ),
           ),
         ],

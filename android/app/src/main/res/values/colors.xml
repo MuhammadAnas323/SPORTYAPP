@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Matches the Flutter splash gradient (deep end) to avoid a white flash on launch. -->
+    <color name="launch_background">#0B4D30</color>
+</resources>

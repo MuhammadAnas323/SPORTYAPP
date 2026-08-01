@@ -11,6 +11,7 @@ import '../services/adapters/football_api_adapter.dart';
 import '../services/adapters/sports_api_adapter.dart';
 import '../services/feed_aggregator_service.dart';
 import '../services/live_sync_service.dart';
+import '../features/auth/viewmodels/auth_view_model.dart';
 import 'connection_repository.dart';
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -58,6 +59,9 @@ class ConnectionsNotifier extends AsyncNotifier<List<ApiConnection>> {
 
   @override
   Future<List<ApiConnection>> build() async {
+    // Rebuild when the auth user changes so channels always belong to the
+    // currently signed-in (anonymous) account.
+    ref.watch(authViewModelProvider);
     final repository = ref.watch(connectionRepositoryProvider);
     _subscription = repository.watchAll().listen((items) {
       if (!_active) return;

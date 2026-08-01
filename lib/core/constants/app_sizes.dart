@@ -15,6 +15,9 @@ abstract final class AppSizes {
   static const double xxxl = 48;
 
   // ---- Radii ----------------------------------------------------------------
+  /// Smallest radius for compact filter chips.
+  static const double radiusXs = 5;
+
   /// Small rounded chip/pill radius.
   static const double radiusSm = 8;
 

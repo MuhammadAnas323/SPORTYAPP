@@ -5,14 +5,19 @@ class AdapterTestResult extends Equatable {
   const AdapterTestResult.success({
     required this.latency,
     this.message = 'Connection verified.',
+    this.retryAfter,
   }) : success = true;
 
-  const AdapterTestResult.failure({required this.message, this.latency})
-      : success = false;
+  const AdapterTestResult.failure({
+    required this.message,
+    this.latency,
+    this.retryAfter,
+  }) : success = false;
 
   final bool success;
   final String message;
   final Duration? latency;
+  final Duration? retryAfter;
 
   String get latencyLabel {
     final l = latency;
@@ -22,5 +27,5 @@ class AdapterTestResult extends Equatable {
   }
 
   @override
-  List<Object?> get props => [success, message, latency];
+  List<Object?> get props => [success, message, latency, retryAfter];
 }

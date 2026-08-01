@@ -2,46 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/auth/views/forgot_password_screen.dart';
-import '../features/auth/views/login_screen.dart';
-import '../features/auth/views/register_screen.dart';
-import '../features/auth/viewmodels/auth_view_model.dart';
 import '../features/home/views/home_screen.dart';
 import '../features/live/views/live_screen.dart';
 import '../features/match_details/views/match_detail_screen.dart';
 import '../features/profile/about/views/about_screen.dart';
 import '../features/profile/api_integrations/views/add_edit_connection_screen.dart';
 import '../features/profile/api_integrations/views/api_integrations_screen.dart';
+import '../features/profile/api_integrations/views/api_type_picker_screen.dart';
 import '../features/profile/support/views/support_screen.dart';
 import '../features/profile/views/profile_screen.dart';
 import '../features/shell/main_shell.dart';
 import '../features/splash/views/splash_screen.dart';
 import '../models/sport_type.dart';
 
-/// A notifier we bump whenever auth state changes so go_router re-runs its
-/// redirect and sends the user to the right place automatically.
-final _routerRefresh = ValueNotifier<Object?>(null);
-
-/// go_router instance — named routes, deep-link ready, redirect-guarded.
+/// go_router instance — named routes, deep-link ready.
 final routerProvider = Provider<GoRouter>((ref) {
-  ref.onDispose(_routerRefresh.dispose);
-  ref.listen(authViewModelProvider, (_, _) => _routerRefresh.value = Object());
-
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: _routerRefresh,
     redirect: (context, state) {
-      final signedIn = ref.read(authViewModelProvider).valueOrNull != null;
       final loc = state.matchedLocation;
-
-      const public = {'/splash', '/login', '/register', '/forgot-password'};
-      const authOnly = {'/login', '/register', '/forgot-password'};
-
-      if (!signedIn) {
-        if (public.contains(loc)) return null;
-        return '/login';
-      }
-      if (authOnly.contains(loc)) return '/home';
       if (loc == '/') return '/home';
       return null;
     },
@@ -50,21 +29,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/login',
-        pageBuilder: (context, state) =>
-            _fadePage(const LoginScreen(), state),
-      ),
-      GoRoute(
-        path: '/register',
-        pageBuilder: (context, state) =>
-            _fadePage(const RegisterScreen(), state),
-      ),
-      GoRoute(
-        path: '/forgot-password',
-        pageBuilder: (context, state) =>
-            _fadePage(const ForgotPasswordScreen(), state),
       ),
 
       // ---- Match detail (full-screen overlay, shared-axis feel) ----------------
@@ -112,7 +76,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(
                   path: 'api',
-                  builder: (context, state) => const ApiIntegrationsScreen(),
+                  builder: (context, state) => const ApiTypePickerScreen(),
+                ),
+                GoRoute(
+                  path: 'api/cricket',
+                  builder: (context, state) =>
+                      const ApiIntegrationsScreen(sportType: SportType.cricket),
+                ),
+                GoRoute(
+                  path: 'api/football',
+                  builder: (context, state) =>
+                      const ApiIntegrationsScreen(sportType: SportType.football),
                 ),
                 GoRoute(
                   path: 'api/add',
@@ -170,18 +144,6 @@ CustomTransitionPage<void> _sharedAxisPage(Widget child, GoRouterState state) {
           child: child,
         ),
       );
-    },
-  );
-}
-
-/// Fade-through for top-level auth routes.
-CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
-  return CustomTransitionPage(
-    key: state.pageKey,
-    child: child,
-    transitionDuration: const Duration(milliseconds: 300),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(opacity: animation, child: child);
     },
   );
 }

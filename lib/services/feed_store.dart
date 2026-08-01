@@ -7,7 +7,7 @@ import '../repositories/providers.dart';
 
 /// How often the feed is re-fetched while at least one match is live.
 /// This is what keeps live cricket cards ticking over ball-by-ball.
-const Duration livePollInterval = Duration(seconds: 20);
+const Duration livePollInterval = Duration(seconds: 45);
 
 /// Immutable state of the shared aggregated feed.
 class FeedState {

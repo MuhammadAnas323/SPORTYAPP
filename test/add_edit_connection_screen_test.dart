@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sportsync/features/profile/api_integrations/views/add_edit_connection_screen.dart';
+import 'package:sportsync/features/profile/api_integrations/viewmodels/connection_form_view_model.dart';
 import 'package:sportsync/models/api_connection.dart';
 import 'package:sportsync/models/auth_style.dart';
 import 'package:sportsync/models/sport_type.dart';
@@ -49,8 +50,29 @@ void main() {
     expect(find.text('Connected APIs'), findsOneWidget);
 
     final saveY = tester.getTopLeft(find.text('Save channel')).dy;
-    final labelY = tester.getTopLeft(find.text('Connection name')).dy;
+    final labelY = tester.getTopLeft(find.text('API name')).dy;
     expect(saveY, lessThan(labelY));
+  });
+
+  testWidgets('API name field accepts and keeps typed text', (tester) async {
+    await tester.pumpWidget(harness());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final field = find.byType(TextFormField).first;
+    await tester.enterText(field, 'My cricket API');
+    await tester.pump();
+
+    // The typed text survives the rebuild triggered by the state update
+    // (regression: a controller recreated on every build dropped keystrokes).
+    expect(tester.takeException(), isNull);
+    expect(find.text('My cricket API'), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AddEditConnectionScreen)),
+    );
+    expect(container.read(connectionFormViewModelProvider).label,
+        'My cricket API');
   });
 
   testWidgets('Connected APIs sheet lists every connection with edit/delete',

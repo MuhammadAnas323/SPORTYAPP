@@ -35,6 +35,15 @@ class _AddEditConnectionScreenState
   bool _loaded = false;
   bool _obscureKey = true;
 
+  // Persistent controllers: a controller created fresh on every rebuild (the
+  // old `TextEditingController(text: state.label)` pattern) replaces the
+  // field's controller on each keystroke, corrupting typing and the caret.
+  final _labelController = TextEditingController();
+  final _baseUrlController = TextEditingController();
+  final _apiKeyController = TextEditingController();
+  final _headerNameController = TextEditingController();
+  final _extraHeadersController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +62,16 @@ class _AddEditConnectionScreenState
     });
   }
 
+  @override
+  void dispose() {
+    _labelController.dispose();
+    _baseUrlController.dispose();
+    _apiKeyController.dispose();
+    _headerNameController.dispose();
+    _extraHeadersController.dispose();
+    super.dispose();
+  }
+
   void _tryLoad() {
     if (widget.connectionId == null || _loaded) return;
     final conn = ref
@@ -62,6 +81,13 @@ class _AddEditConnectionScreenState
         .firstOrNull;
     if (conn != null) {
       _loaded = true;
+      _labelController.text = conn.label;
+      _baseUrlController.text = conn.baseUrl;
+      _apiKeyController.text = conn.apiKey;
+      _headerNameController.text = conn.headerName ?? '';
+      _extraHeadersController.text = conn.extraHeaders.entries
+          .map((e) => '${e.key}: ${e.value}')
+          .join('\n');
       ref.read(connectionFormViewModelProvider.notifier).loadForEdit(conn);
     }
   }
@@ -80,7 +106,14 @@ class _AddEditConnectionScreenState
   Future<void> _save() async {
     if (!ref.read(connectionFormViewModelProvider).canSave) return;
     final ok = await ref.read(connectionFormViewModelProvider.notifier).save();
-    if (ok && mounted) context.go('/profile/api');
+    if (ok && mounted) {
+      final sport = ref.read(connectionFormViewModelProvider).sportType;
+      context.go(
+        sport == SportType.football
+            ? '/profile/api/football'
+            : '/profile/api/cricket',
+      );
+    }
   }
 
   /// Bottom sheet listing every connected API with edit/delete actions. It
@@ -287,7 +320,7 @@ class _AddEditConnectionScreenState
 
           AppTextField(
             label: AppStrings.connectionLabel,
-            controller: TextEditingController(text: state.label),
+            controller: _labelController,
             hint: AppStrings.connectionLabelHint,
             onChanged: notifier.setLabel,
           ),
@@ -314,7 +347,7 @@ class _AddEditConnectionScreenState
           const SizedBox(height: AppSizes.lg),
           AppTextField(
             label: AppStrings.baseUrl,
-            controller: TextEditingController(text: state.baseUrl),
+            controller: _baseUrlController,
             hint: AppStrings.baseUrlHint,
             onChanged: notifier.setBaseUrl,
             keyboardType: TextInputType.url,
@@ -323,7 +356,7 @@ class _AddEditConnectionScreenState
           const SizedBox(height: AppSizes.lg),
           AppTextField(
             label: AppStrings.apiKey,
-            controller: TextEditingController(text: state.apiKey),
+            controller: _apiKeyController,
             hint: AppStrings.apiKeyHint,
             onChanged: notifier.setApiKey,
             obscure: _obscureKey,
@@ -345,7 +378,7 @@ class _AddEditConnectionScreenState
               label: state.authStyle == AuthStyle.customHeader
                   ? AppStrings.customHeaderName
                   : AppStrings.queryParamName,
-              controller: TextEditingController(text: state.headerName),
+              controller: _headerNameController,
               hint: state.authStyle == AuthStyle.customHeader
                   ? AppStrings.customHeaderNameHint
                   : AppStrings.queryParamNameHint,
@@ -355,7 +388,7 @@ class _AddEditConnectionScreenState
           const SizedBox(height: AppSizes.lg),
           AppTextField(
             label: AppStrings.extraHeaders,
-            controller: TextEditingController(text: state.extraHeadersText),
+            controller: _extraHeadersController,
             hint: AppStrings.extraHeadersHint,
             onChanged: notifier.setExtraHeaders,
             maxLines: 3,
@@ -369,7 +402,7 @@ class _AddEditConnectionScreenState
                 : AppStrings.testConnection,
             icon: Icons.check_circle_outline_rounded,
             loading: state.isTesting,
-            onPressed: state.isTesting ? null : _test,
+            onPressed: state.isTesting || state.isRetryLocked ? null : _test,
           ),
 
           const SizedBox(height: AppSizes.xl),
@@ -380,6 +413,7 @@ class _AddEditConnectionScreenState
               success: state.testResult!.success,
               message: state.testResult!.message,
               latency: state.testResult!.latencyLabel,
+              retryRemaining: state.retryRemaining,
             ),
         ],
       ),
@@ -392,11 +426,26 @@ class _TestResultPanel extends StatelessWidget {
     required this.success,
     required this.message,
     required this.latency,
+    this.retryRemaining,
   });
 
   final bool success;
   final String message;
   final String latency;
+  final Duration? retryRemaining;
+
+  String _formatRetryRemaining(Duration duration) {
+    if (duration.inHours >= 1) {
+      final hours = duration.inHours;
+      return '$hours hour${hours == 1 ? '' : 's'}';
+    }
+    if (duration.inMinutes >= 1) {
+      final minutes = duration.inMinutes;
+      return '$minutes minute${minutes == 1 ? '' : 's'}';
+    }
+    final seconds = duration.inSeconds;
+    return '$seconds second${seconds == 1 ? '' : 's'}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -439,6 +488,15 @@ class _TestResultPanel extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Response in $latency',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+                if (retryRemaining != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Retry available in ${_formatRetryRemaining(retryRemaining!)}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),

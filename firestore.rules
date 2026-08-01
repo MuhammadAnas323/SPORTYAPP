@@ -1,10 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each signed-in user owns their own subtree. Only the account holder
-    // can read/write their saved connections and profile.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Shared, project-wide channel list. Every signed-in user (the app signs
+    // in anonymously per install) can read and write it so a channel added on
+    // one device appears on every other device.
+    match /connections/{connectionId} {
+      allow read, write: if request.auth != null;
     }
   }
 }

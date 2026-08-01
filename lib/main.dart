@@ -22,7 +22,7 @@ class SportSyncApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'SportyApp',
+      title: 'SPORTYAPP',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       theme: AppTheme.light,

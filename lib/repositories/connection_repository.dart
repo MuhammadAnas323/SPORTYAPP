@@ -5,22 +5,38 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/errors/app_exception.dart';
 import '../models/api_connection.dart';
+import '../models/connection_status.dart';
 
-/// Persists [ApiConnection] records in Cloud Firestore, scoped to the
-/// signed-in user: `users/{uid}/connections/{id}`.
+/// Persists [ApiConnection] records in a **project-wide** Cloud Firestore
+/// collection (`connections/{id}`), shared by every device that runs the app.
 ///
-/// The Firestore security rules lock every user to their own subtree, and a
-/// live snapshot stream keeps Home/Live/Profile in sync across devices.
+/// Because the app signs every install in as its own anonymous account, the
+/// data can't live under `users/{uid}` or each device would only ever see its
+/// own channels. A shared collection means a channel added on one device
+/// appears instantly on every other device (the live snapshot stream keeps
+/// Home/Live/Profile in sync).
 class ConnectionRepository {
   ConnectionRepository(this._auth, this._firestore);
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
-  static const String _prefix = 'conn.';
+  ApiConnection _sanitizeRemoteConnection(ApiConnection connection) {
+    final currentUid = _auth.currentUser?.uid;
+    if (currentUid == null) return connection;
+    if (connection.createdByUid == null || connection.createdByUid == currentUid) {
+      return connection;
+    }
+    return connection.copyWith(
+      apiKey: '',
+      status: ConnectionStatus.notTested,
+      lastTestedAt: null,
+      lastError: null,
+    );
+  }
 
-  /// Emits the full connection list for the signed-in user after every
-  /// change (local edit, another device, sign-out → empty list).
+  /// Emits the full shared connection list after every change (local edit,
+  /// another device, etc.).
   Stream<List<ApiConnection>> watchAll() {
     final controller = StreamController<List<ApiConnection>>.broadcast();
     StreamSubscription<User?>? authSub;
@@ -33,16 +49,13 @@ class ConnectionRepository {
         controller.add(const []);
         return;
       }
-      firestoreSub = _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('connections')
-          .snapshots()
-          .listen(
+      firestoreSub = _firestore.collection('connections').snapshots().listen(
         (snapshot) {
           controller.add(
             snapshot.docs
-                .map((doc) => ApiConnection.fromJson(doc.data()))
+                .map((doc) => _sanitizeRemoteConnection(
+                      ApiConnection.fromJson(doc.data()),
+                    ))
                 .toList(),
           );
         },
@@ -67,51 +80,41 @@ class ConnectionRepository {
 
   /// One-shot read for the notifier's initial build.
   Future<List<ApiConnection>> loadAll() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return const [];
+    if (_auth.currentUser == null) return const [];
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('connections')
-          .get();
+      final snapshot = await _firestore.collection('connections').get();
       return snapshot.docs
-          .map((doc) => ApiConnection.fromJson(doc.data()))
+          .map((doc) => _sanitizeRemoteConnection(
+                ApiConnection.fromJson(doc.data()),
+              ))
           .toList();
     } catch (error) {
       throw StorageException('Could not read saved connections.', cause: error);
     }
   }
 
-  /// Upserts a connection for the signed-in user.
+  /// Upserts a connection into the shared collection.
   Future<void> save(ApiConnection connection) async {
     try {
-      await _requireUid().collection('connections').doc(connection.id).set(
-            connection.toJson(),
-          );
+      final currentUid = _auth.currentUser?.uid;
+      final toSave = (currentUid != null && connection.createdByUid == null)
+          ? connection.copyWith(createdByUid: currentUid)
+          : connection;
+      await _firestore
+          .collection('connections')
+          .doc(toSave.id)
+          .set(toSave.toJson());
     } catch (error) {
       throw StorageException('Could not save this connection.', cause: error);
     }
   }
 
-  /// Removes a connection for the signed-in user.
+  /// Removes a connection from the shared collection.
   Future<void> delete(String id) async {
     try {
-      await _requireUid().collection('connections').doc(id).delete();
+      await _firestore.collection('connections').doc(id).delete();
     } catch (error) {
       throw StorageException('Could not delete this connection.', cause: error);
     }
   }
-
-  DocumentReference<Map<String, dynamic>> _requireUid() {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw const AuthException('Sign in before managing connections.');
-    }
-    return _firestore.collection('users').doc(uid);
-  }
-
-  // Kept for API stability with older callers; Firestore handles ordering
-  // itself so this is a no-op.
-  static String storageKey(String id) => '$_prefix$id';
 }

@@ -1,43 +1,21 @@
-/// User-facing copy used across SportyApp.
+/// User-facing copy used across SPORTYAPP.
 ///
 /// Keeping strings centralised makes future localisation (arb) trivial.
 abstract final class AppStrings {
   AppStrings._();
 
   // ---- Brand ----------------------------------------------------------------
-  static const String appName = 'SportyApp';
+  static const String appName = 'SPORTYAPP';
+  static const String splashWelcome = 'Welcome to SPORTYAPP';
   static const String appTagline = 'Your feeds. Your channels. One stadium.';
   static const String appDescription =
-      'SportyApp is a shell that comes alive with the sport APIs you connect. '
+      'SPORTYAPP is a shell that comes alive with the sport APIs you connect. '
       'No bundled data — every match, score and card below is streamed straight '
       'from a channel you own.';
 
-  // ---- Auth (Firebase email/password) ---------------------------------------
-  static const String loginTitle = 'Welcome back';
-  static const String loginSubtitle =
-      'Sign in with your SportyApp account to open your connected channels.';
-  static const String registerTitle = 'Create your account';
-  static const String registerSubtitle =
-      'Your channels and settings sync to your SportyApp account.';
-  static const String forgotPasswordTitle = 'Reset password';
-  static const String forgotPasswordSubtitle =
-      'Enter your email and we will send you a link to reset your password.';
+  // ---- Auth (auto anonymous — no sign-in screens) ----------------------------
   static const String emailLabel = 'Email';
-  static const String emailHint = 'you@example.com';
-  static const String passwordLabel = 'Password';
-  static const String passwordHint = 'At least 8 characters';
   static const String nameLabel = 'Name';
-  static const String nameHint = 'How should we greet you?';
-  static const String signIn = 'Sign in';
-  static const String createAccount = 'Create account';
-  static const String noAccount = 'No account yet?';
-  static const String haveAccount = 'Already have an account?';
-  static const String signUp = 'Sign up';
-  static const String resetPassword = 'Reset password';
-  static const String backToLogin = 'Back to sign in';
-  static const String passwordResetSent =
-      'We have emailed you a link to reset your password. Check your inbox.';
-  static const String signOut = 'Sign out';
 
   // ---- Empty state CTA --------------------------------------------------------
   static const String noMatchesTitle = 'No matches yet';
@@ -45,14 +23,13 @@ abstract final class AppStrings {
       'Matches from your connected channels will appear here.';
   static const String noChannelsTitle = 'No channels connected yet';
   static const String noChannelsBody =
-      'SportyApp has no data of its own. Connect and verify at least one sport '
+      'SPORTYAPP has no data of its own. Connect and verify at least one sport '
       'API and your Home feed will appear here.';
   static const String addFirstChannel = 'Add your first channel';
   static const String nothingLiveTitle = 'Nothing live right now';
   static const String nothingLiveBody =
       'None of your connected channels report a live match at the moment. '
       'Head back Home for upcoming and recent action.';
-  static const String goHome = 'Back to Home';
 
   // ---- Home / Live -----------------------------------------------------------
   static const String homeTitle = 'Home';
@@ -94,29 +71,39 @@ abstract final class AppStrings {
   static const String supportSection = 'Support & Contact';
   static const String editProfile = 'Edit profile';
   static const String addChannel = 'Add API';
-  static const String addChannelBody =
-      'Connect a sport data source to your feed. You can add as many as you like.';
-  static const String chooseApiType = 'Choose API type';
   static const String connectedApis = 'Connected APIs';
   static const String connectedApisEmpty = 'No connected APIs yet';
+  static const String developerModeActivated = 'Developer Mode Activated';
+  static const String chooseApiType = 'Choose API type';
+  static const String cricketApisBody =
+      'View, add and manage your connected cricket APIs';
+  static const String footballApisBody =
+      'View, add and manage your connected football APIs';
   static const String channelsEmpty = 'No connections yet';
   static const String channelsEmptyBody =
       'Add your first sport API to start building your feed.';
-  static const String connectionLabel = 'Connection name';
+  static const String connectionLabel = 'API name';
   static const String connectionLabelHint = 'e.g. My cricket API';
   static const String sportType = 'Sport type';
   static const String sportTypeHelper =
       'You can add as many Cricket and Football APIs as you like.';
   static const String cricketApi = 'Cricket API';
   static const String footballApi = 'Football API';
-  static const String cricketApiHelper =
-      'Scores, ball-by-ball commentary and live streams';
-  static const String footballApiHelper =
-      'Scores, fixtures and live streams';
   static const String baseUrl = 'Base URL / host';
   static const String baseUrlHint = 'https://api.example.com/v1';
   static const String apiKey = 'API key';
   static const String apiKeyHint = 'Paste your secret key here';
+  static const String invalidApiKey = 'Invalid API Key. Double-check the key and auth style.';
+  static const String invalidBaseUrl = 'Invalid Base URL. Check the host and path.';
+  static const String missingRequiredHeader =
+      'Required auth header/query param is missing. Check the auth style and header name.';
+  static const String subscriptionRequired =
+      'Subscription required. The API host rejected your request for access.';
+  static const String accessDenied = 'Access denied. Your credentials are not allowed.';
+  static const String invalidJsonResponse =
+      'Invalid JSON response received. Verify the API host returns JSON.';
+  static const String connectionTimedOut = 'Connection timed out. Please try again.';
+  static const String rateLimited = 'The API is rate-limited. Try again shortly.';
   static const String authStyle = 'Auth style';
   static const String authStyleBearer = 'Bearer token';
   static const String authStyleHeader = 'Custom header';
@@ -167,14 +154,43 @@ abstract final class AppStrings {
       'Notification preferences are local placeholders — push delivery via FCM '
       'is a planned extension (see README "Future-ready hooks").';
 
-  // ---- About / Support ---------------------------------------------------------
+  // ---- About / Support / Contact ----------------------------------------------
   static const String aboutBody =
-      'SportyApp is a multi-sport live companion that renders only the data your '
-      'own connected sport APIs return. No bundled backend, no sample data.';
+      'SPORTYAPP is a multi-sport live companion that renders only the data your '
+      'own connected sport APIs return. No bundled backend, no sample data. '
+      'Connect once, verify, and your Home, Live and Match screens come alive '
+      'straight from the sources you control.';
+  static const String aboutBullet1 =
+      'No bundled data — everything renders from APIs you connect.';
+  static const String aboutBullet2 =
+      'API keys are stored in secure device storage.';
+  static const String aboutBullet3 =
+      'Cricket + football today; more sports via adapter extensions.';
   static const String version = 'Version 0.1.0';
   static const String supportBody =
-      'SportyApp does not own any sport data. For issues with a specific source, '
-      'please contact the provider of the API you connected.';
+      'SPORTYAPP does not own any sport data. If a channel looks wrong, first '
+      'confirm the API is healthy and your key is valid — then check the '
+      'provider docs. For anything about SPORTYAPP itself, reach out below.';
+  static const String faqTitle = 'Frequently asked questions';
+  static const String faq1Question = 'Why is my channel showing no matches?';
+  static const String faq1Answer =
+      'Most likely the API rejected your key (check the connection status on '
+      'the API Settings screen) or the provider is rate-limiting you. Pull to '
+      'refresh, or re-test the connection.';
+  static const String faq2Question = 'Why did my connection test fail?';
+  static const String faq2Answer =
+      'A test fails when the host does not accept your key or returns an error '
+      'envelope. Double-check the base URL and key, then try again — some '
+      'providers block rapid re-tests for a few minutes.';
+  static const String faq3Question = 'Is SPORTYAPP a streaming service?';
+  static const String faq3Answer =
+      'No. SPORTYAPP is an aggregator/viewer of the sport APIs you connect. It '
+      'does not scrape, record, or rebroadcast third-party live streams.';
+  static const String contactTitle = 'Contact';
+  static const String contactBody =
+      'Questions, feature ideas or a bug to report? Send us an email — we read '
+      'every message and usually reply within 24–48 hours.';
+  static const String responseTime = 'Typical reply time: 24–48 hours.';
   static const String contactEmail = 'support@sportyapp.app';
   static const String sendFeedback = 'Send feedback';
   static const String documentation = 'Documentation';
