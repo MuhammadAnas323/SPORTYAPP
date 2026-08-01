@@ -1,0 +1,52 @@
+name: sportsync
+description: "SportSync — a multi-sport live companion app (cricket + football) that renders only the data your own connected sport APIs return."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management (Riverpod 2.x — MVVM ViewModels built on Notifiers/AsyncNotifiers)
+  flutter_riverpod: ^2.6.1
+
+  # Routing (named routes, deep-link ready)
+  go_router: ^14.8.1
+
+  # Networking behind repository/adapter interfaces
+  dio: ^5.7.0
+
+  # Live video streaming (HLS .m3u8 / MP4 / DASH .mpd) with controls
+  video_player: ^2.9.2
+  chewie: ^1.8.5
+
+  # Secure local storage for API keys / credentials
+  # Non-secret settings (theme, onboarding flag, local auth session)
+  shared_preferences: ^2.3.3
+
+  # Fonts — Poppins headings + Inter body
+  google_fonts: ^6.2.1
+
+  # Value equality for domain models
+  equatable: ^2.0.7
+
+  # Unique ids for connections / channels
+  uuid: ^4.5.1
+
+  # Date/relative time formatting for feeds
+  intl: ^0.20.0
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  cloud_firestore: ^6.7.1
+  firebase_database: ^12.4.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

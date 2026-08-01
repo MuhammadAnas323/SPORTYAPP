@@ -1,0 +1,16 @@
+{
+  "rules": {
+    // Live match mirror: any signed-in user may read the live feed and
+    // write their own live updates under /live/{uid}.
+    "live": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        "$connectionId": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
+    }
+  }
+}

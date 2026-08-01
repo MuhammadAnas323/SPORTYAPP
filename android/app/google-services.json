@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "165943664478",
+    "firebase_url": "https://todoapp-f2a8c-default-rtdb.firebaseio.com",
+    "project_id": "todoapp-f2a8c",
+    "storage_bucket": "todoapp-f2a8c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165943664478:android:f8d7977a69fb3f7afcb9cf",
+        "android_client_info": {
+          "package_name": "com.example.todo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNyXf6EhbwsJtZS7F0fYIkCXBKks35cHI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165943664478:android:4d8b126e9fc2ac1afcb9cf",
+        "android_client_info": {
+          "package_name": "com.example.urdu_designer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNyXf6EhbwsJtZS7F0fYIkCXBKks35cHI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165943664478:android:1ccb2f32189f761ffcb9cf",
+        "android_client_info": {
+          "package_name": "com.sportsync.sportsync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNyXf6EhbwsJtZS7F0fYIkCXBKks35cHI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
